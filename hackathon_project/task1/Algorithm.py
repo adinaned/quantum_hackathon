@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from matplotlib.patches import RegularPolygon
+from matplotlib.patches import RegularPolygon, Circle
 import numpy as np
 import random
 from typing import List, Set, Optional
@@ -248,11 +248,39 @@ probability_map = {
     12: 1
 }
 
+def generate_lists():   
+    radius = 1.0
+    hex_radius = radius
+    axial_coords = [(0, 0),
+                    (1, 0), (1, -1), (0, -1),
+                    (-1, 0), (-1, 1), (0, 1)]
+
+    def axial_to_cart(q, r):
+        x = hex_radius * (np.sqrt(3) * q + np.sqrt(3) / 2 * r)
+        y = hex_radius * (1.5 * r)
+        return x, y
+    
+    hex_centers = [axial_to_cart(q, r) for q, r in axial_coords]
+
+    terrain_types = {
+        "Forest": "#2E8B57",
+        "Field": "#F4E04D",
+        "Pasture": "#9ACD32",
+        "Hill": "#D2691E",
+        "Mountain": "#A9A9A9",
+    }
+
+    terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
+    dice_numbers = random.sample([2, 3, 4, 5, 6, 8, 9, 10, 11, 12], len(hex_centers))
+
+    return terrain_list, dice_numbers
+
 
 # --- Original draw function, now builds a Board object ---
 def draw_catan_terrain_map(
-        terrain_list: list[str] | None = None,
-        dice_numbers: list[int] | None = None
+        terrain_list: list[str],
+        dice_numbers: list[int],
+        top_pair: tuple[int, int] | None = None
 ):
     radius = 1.0
     hex_radius = radius
@@ -267,6 +295,13 @@ def draw_catan_terrain_map(
 
     hex_centers = [axial_to_cart(q, r) for q, r in axial_coords]
 
+    terrain_types = {
+        "Forest": "#2E8B57",
+        "Field": "#F4E04D",
+        "Pasture": "#9ACD32",
+        "Hill": "#D2691E",
+        "Mountain": "#A9A9A9",
+    }
     # Generate randomly if not provided
     if terrain_list is None:
         terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
@@ -316,15 +351,41 @@ def draw_catan_terrain_map(
 
     ax.scatter([hx for hx, hy in hex_centers], [hy for hx, hy in hex_centers],
                c=[terrain_types[t] for t in terrain_list], s=40, alpha=0)
+    
+    # --- Poziționează vertexurile ---
+    vertex_positions = []
+    # angle_offset = np.pi / 6  # 30° (colțurile hexagonului)
+    angle_offset = - np.pi / 6 
+    for hx, hy in hex_centers:
+        for k in range(6):
+            angle = angle_offset - k * np.pi / 3
+            vx = hx + np.cos(angle) * hex_radius
+            vy = hy + np.sin(angle) * hex_radius
+            vertex_positions.append((vx, vy))
+            ax.scatter(vx, vy, color='black', s=10)
+
+
+    # --- Evidențiere top_pair ---
+    if top_pair is not None:
+        (i, j) = top_pair
+        if i < len(vertex_positions) and j < len(vertex_positions):
+            xi, yi = vertex_positions[j] 
+            xj, yj = vertex_positions[i]
+            ax.scatter(xi, yi, color='red', s=150, zorder=5)
+            ax.scatter(xj, yj, color='red', s=150, zorder=5)
+         
     plt.title("Quantum Catan Challenge — Random Terrain Map", fontsize=14)
     plt.show()
 
-    return terrain_list, dice_numbers, board
+    return  board
 
 
 # --- Run ---
 terrain_list = ['Mountain', 'Hill', 'Forest', 'Mountain', 'Field', 'Pasture', 'Hill']
 dice_numbers = [2, 4, 9, 11, 10, 8, 5]
+terrain_list, dice_numbers = generate_lists()
+board = draw_catan_terrain_map(terrain_list, dice_numbers)
+# print(board)
 terrains, numbers, board = draw_catan_terrain_map(terrain_list, dice_numbers)
 print(board)
 edges = board.compute_edges()
