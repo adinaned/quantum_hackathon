@@ -80,11 +80,12 @@ class Board:
             raise ValueError("This method assumes a 7-tile board (1 center + 6 surrounding).")
 
         vertices = []
-        vertex_id=0
+        vertex_id = 0
 
-        # --- Step 1: 3-tile vertices (center tile corners) ---
         center = self.tiles[0]
-        outer = self.tiles[1:7]  # surrounding tiles
+        outer = self.tiles[1:7]
+
+        # --- Step 1: 3-tile vertices (center corners) ---
         center_vertices = []
         for i in range(6):
             t1 = outer[i]
@@ -92,13 +93,7 @@ class Board:
             v = Vertex([center, t1, t2], vertex_id)
             center_vertices.append(v)
             vertices.append(v)
-            vertex_id+=1
-
-        # Set neighbors of center vertices (ring around center)
-        for i in range(6):
-            v = center_vertices[i]
-            v.neighbors.add(center_vertices[(i - 1) % 6])
-            v.neighbors.add(center_vertices[(i + 1) % 6])
+            vertex_id += 1
 
         # --- Step 2: 2-tile vertices (edges between neighboring outer tiles) ---
         edge_vertices = []
@@ -108,41 +103,52 @@ class Board:
             v = Vertex([t1, t2], vertex_id)
             edge_vertices.append(v)
             vertices.append(v)
-            vertex_id+=1
-
-        # Connect edge vertices in ring
-        for i in range(6):
-            v = edge_vertices[i]
-            v.neighbors.add(edge_vertices[(i - 1) % 6])
-            v.neighbors.add(edge_vertices[(i + 1) % 6])
+            vertex_id += 1
 
         # --- Step 3: 1-tile vertices (outer corners) ---
         outer_corner_vertices = []
         for i in range(6):
             t = outer[i]
-            # Each outer tile has two outer corners
             for _ in range(2):
                 v = Vertex([t], vertex_id)
                 outer_corner_vertices.append(v)
                 vertices.append(v)
                 vertex_id += 1
 
-        # --- Step 4: Set neighbors for 1-tile vertices ---
-        # Each outer corner vertex is connected to the two 2-tile vertices of the same tile
-        for i, t in enumerate(outer):
-            # The two 2-tile vertices for this tile:
-            left_edge = edge_vertices[i - 1]  # edge with previous outer tile
-            right_edge = edge_vertices[i]  # edge with next outer tile
+        # --- Step 4: Set neighbors for center vertices ---
+        for i in range(6):
+            cv = center_vertices[i]
+            # Neighboring center vertices in the ring
+            cv.neighbors.add(center_vertices[(i - 1) % 6].id)
+            cv.neighbors.add(center_vertices[(i + 1) % 6].id)
+            # Neighboring edge vertex
+            cv.neighbors.add(edge_vertices[i].id)
 
-            # Two 1-tile vertices for this tile
-            v1 = outer_corner_vertices[2 * i]
-            v2 = outer_corner_vertices[2 * i + 1]
+        # --- Step 5: Set neighbors for edge vertices ---
+        for i in range(6):
+            ev = edge_vertices[i]
+            # Neighboring center vertex
+            ev.neighbors.add(center_vertices[i].id)
+            # Neighboring outer corners (exact ones on this edge)
+            outer_i_corner = outer_corner_vertices[2 * i + 1]  # second corner of outer[i]
+            outer_next_corner = outer_corner_vertices[2 * ((i + 1) % 6)]  # first corner of outer[i+1]
+            ev.neighbors.add(outer_i_corner.id)
+            ev.neighbors.add(outer_next_corner.id)
 
-            v1.neighbors.add(left_edge)
-            v1.neighbors.add(right_edge)
+        # --- Step 6: Set neighbors for 1-tile outer corners (corrected) ---
+        for i in range(6):
+            left_edge = edge_vertices[i - 1]  # edge between outer[i-1] and outer[i]
+            right_edge = edge_vertices[i]  # edge between outer[i] and outer[i+1]
 
-            v2.neighbors.add(left_edge)
-            v2.neighbors.add(right_edge)
+            v1 = outer_corner_vertices[2 * i]  # first corner of outer[i]
+            v2 = outer_corner_vertices[2 * i + 1]  # second corner of outer[i]
+
+            # Connect corners correctly
+            v1.neighbors.add(left_edge.id)  # connect to previous edge
+            v1.neighbors.add(v2.id)  # connect to the other corner of the same tile
+
+            v2.neighbors.add(v1.id)  # connect to other corner
+            v2.neighbors.add(right_edge.id)  # connect to next edge
 
         self.vertices = vertices
 
@@ -155,12 +161,12 @@ class Board:
         edges = set()
 
         for v in self.vertices:
-            print(f"Neigbours of {v.id} are:")
-            for neighbor in v.neighbors:
-                print(neighbor.id)
+            print(f"Neigbours of {v.id} are: ")
+            for neighbor_id in v.neighbors:
+                print(neighbor_id)
                 # Only add edge if neighbor is a Vertex object
-                if isinstance(neighbor, Vertex):
-                    edge = (min(v.id, neighbor.id), max(v.id, neighbor.id))
+                if isinstance(neighbor_id, int):
+                    edge = (min(v.id, neighbor_id), max(v.id, neighbor_id))
                     edges.add(edge)
 
         return sorted(edges)
@@ -189,8 +195,8 @@ probability_map = {
 
 # --- Original draw function, now builds a Board object ---
 def draw_catan_terrain_map(
-    terrain_list: list[str] | None = None,
-    dice_numbers: list[int] | None = None
+        terrain_list: list[str] | None = None,
+        dice_numbers: list[int] | None = None
 ):
     radius = 1.0
     hex_radius = radius
@@ -218,7 +224,6 @@ def draw_catan_terrain_map(
         terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
     if dice_numbers is None:
         dice_numbers = random.sample([2, 3, 4, 5, 6, 8, 9, 10, 11, 12], len(hex_centers))
-
 
     # --- Build Board ---
     board = Board()
@@ -270,13 +275,10 @@ def draw_catan_terrain_map(
 
 
 # --- Run ---
-terrain_list=['Mountain', 'Hill', 'Forest', 'Mountain', 'Field', 'Pasture', 'Hill']
-dice_numbers=[2, 4, 9, 11, 10, 8, 5]
+terrain_list = ['Mountain', 'Hill', 'Forest', 'Mountain', 'Field', 'Pasture', 'Hill']
+dice_numbers = [2, 4, 9, 11, 10, 8, 5]
 terrains, numbers, board = draw_catan_terrain_map(terrain_list, dice_numbers)
-print(board)
+# print(board)
 edges = board.compute_edges()
-#print("Edges:", edges)
-#print("Total edges:", len(edges))
-
-
-#todo look again at score
+print("Edges:", edges)
+print(len(edges))
