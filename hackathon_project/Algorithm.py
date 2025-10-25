@@ -2,16 +2,16 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon
 import numpy as np
 import random
-from typing import List
+from typing import List, Set, Optional
 
 
 # --- Tile class ---
 class Tile:
-    def __init__(self, tile_id, terrain, number):
-        self.id = tile_id
-        self.terrain = terrain
-        self.number = number
-        self.neighbors = []
+    def __init__(self, tile_id: int, terrain: str, number: int):
+        self.id: int = tile_id
+        self.terrain: str = terrain
+        self.number: int = number
+        self.neighbors: List[int] = []  # adjacent tile IDs
 
     def __repr__(self):
         return f"Tile(Id={self.id}, Terrain={self.terrain}, Dice number={self.number}, Neighbour tiles={self.neighbors})"
@@ -19,13 +19,12 @@ class Tile:
 
 # --- Vertex class ---
 class Vertex:
-    def __init__(self, tiles, vertex_id):
-        # tiles: list of Tile objects
-        self.id = vertex_id
-        self.tiles = tiles
-        self.occupied = False
-        self.neighbors = set() #neighbouring vertex ids
-        self.score = None  # will be computed via method
+    def __init__(self, tiles: List['Tile'], vertex_id: int):
+        self.id: int = vertex_id
+        self.tiles: List['Tile'] = tiles
+        self.occupied: bool = False
+        self.neighbors: Set[int] = set()  # neighboring vertex IDs
+        self.score: Optional[float] = None  # computed via method
 
     def calculate_score(self, probability_map):
         """
@@ -151,16 +150,20 @@ class Board:
         """
         Build a list of undirected edges between vertices.
         Each edge is a tuple: (vertex_id1, vertex_id2)
+        Ensures no duplicates and no missing edges.
         """
         edges = set()
 
         for v in self.vertices:
-            for nb_id in v.neighbors:
-                edge = tuple(sorted((v.id, nb_id)))
-                edges.add(edge)
+            print(f"Neigbours of {v.id} are:")
+            for neighbor in v.neighbors:
+                print(neighbor.id)
+                # Only add edge if neighbor is a Vertex object
+                if isinstance(neighbor, Vertex):
+                    edge = (min(v.id, neighbor.id), max(v.id, neighbor.id))
+                    edges.add(edge)
 
-        # Return as sorted list if needed for consistency
-        return sorted(list(edges))
+        return sorted(edges)
 
     def __repr__(self):
         tiles_repr = "\n".join([repr(tile) for tile in self.tiles])
@@ -185,7 +188,10 @@ probability_map = {
 
 
 # --- Original draw function, now builds a Board object ---
-def draw_catan_terrain_map():
+def draw_catan_terrain_map(
+    terrain_list: list[str] | None = None,
+    dice_numbers: list[int] | None = None
+):
     radius = 1.0
     hex_radius = radius
     axial_coords = [(0, 0),
@@ -207,8 +213,12 @@ def draw_catan_terrain_map():
         "Mountain": "#A9A9A9",
     }
 
-    terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
-    dice_numbers = random.sample([2, 3, 4, 5, 6, 8, 9, 10, 11, 12], len(hex_centers))
+    # Generate randomly if not provided
+    if terrain_list is None:
+        terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
+    if dice_numbers is None:
+        dice_numbers = random.sample([2, 3, 4, 5, 6, 8, 9, 10, 11, 12], len(hex_centers))
+
 
     # --- Build Board ---
     board = Board()
@@ -260,8 +270,13 @@ def draw_catan_terrain_map():
 
 
 # --- Run ---
-terrains, numbers, board = draw_catan_terrain_map()
+terrain_list=['Mountain', 'Hill', 'Forest', 'Mountain', 'Field', 'Pasture', 'Hill']
+dice_numbers=[2, 4, 9, 11, 10, 8, 5]
+terrains, numbers, board = draw_catan_terrain_map(terrain_list, dice_numbers)
 print(board)
 edges = board.compute_edges()
-print("Edges:", edges)
-print("Total edges:", len(edges))
+#print("Edges:", edges)
+#print("Total edges:", len(edges))
+
+
+#todo look again at score
