@@ -59,7 +59,7 @@ def build_qubo(hex_numbers, adjacency, lam=None):
         Q[i,i] = -w[i] - 3*lam
     print(f"Q: {Q}")
     for i,j in itertools.combinations(range(m), 2):
-        Q[i,j] = 2*lam
+        Q[i,j] = lam
         Q[j,i] = Q[i,j]
     print(f"Q: {Q}")
     return Q, w, lam

@@ -36,23 +36,31 @@ class Vertex:
         """
         # Base score from probability
         self.score = sum(probability_map.get(t.number, 0) for t in self.tiles)
+        if(self.id==1):
+            print(self.score)
 
         # Count tiles by terrain
         types = [t.terrain for t in self.tiles]
+        if(self.id==1):
+            print(types)
 
         # +1: wood and brick
-        wood_brick_count = sum(t in ["Forest", "Hill"] for t in types)
-        if wood_brick_count >= 2:
+        if "Forest" in types and "Hill" in types:
             self.score += 1
+        if(self.id==1):
+            print(self.score)
 
         # +2: grain and ore
-        grain_ore_count = sum(t in ["Field", "Mountain"] for t in types)
-        if grain_ore_count >= 2:
+        if "Field" in types and "Mountain" in types and "Pasture" not in types:
             self.score += 2
+        if(self.id==1):
+            print(self.score)
 
         # +3: ore + sheep + grain all present
-        if all(x in types for x in ["Mountain", "Pasture", "Field"]):
+        if "Mountain" in types and "Pasture" in types and "Field" in types:
             self.score += 3
+        if(self.id==1):
+            print(self.score)
 
     def __repr__(self):
         # Represent vertex as the list of adjacent tiles with terrain and number
