@@ -3,7 +3,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from base import resources, df_actions, resource_availability
 
-max_repeat = 2  # max copies per action
+max_repeat = 4  # max copies per action
 action_names = list(df_actions.index)
 n_actions = len(action_names)
 n_qubits = n_actions * max_repeat
@@ -111,11 +111,9 @@ def qaoa_turn_loop(resource_availability):
     current_resources = resource_availability.copy()
 
     while True:
-        print(f"\n--- QAOA iteration {iteration} ---")
         best_counts, usage, points = run_qaoa_once(current_resources)
 
         if all(c == 0 for c in best_counts.values()):
-            print("No feasible actions left. Turn ends.")
             break
 
         feasible_move = False
@@ -127,29 +125,22 @@ def qaoa_turn_loop(resource_availability):
                     total_usage[r] += df_actions.loc[a, r] * c
 
         if not feasible_move:
-            print("No valid move this round — stopping.")
             break
 
         total_points += points
         turn_actions.append(best_counts)
 
         print("Chosen actions:", best_counts)
-        print("Remaining resources:", current_resources)
         print(f"Turn points so far: {total_points}")
         iteration += 1
 
         if not any(is_action_feasible(a, current_resources) for a in action_names):
-            print("All resources depleted. Turn ends.")
             break
 
     return turn_actions, total_usage, total_points
 
 
 turn_actions, total_usage, total_points = qaoa_turn_loop(resource_availability)
-
-print("\n=== FINAL TURN SUMMARY ===")
-for i, acts in enumerate(turn_actions, 1):
-    print(f"Step {i}: {acts}")
 
 print("\nTotal resource usage:")
 for r, v in total_usage.items():

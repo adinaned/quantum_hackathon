@@ -14,7 +14,7 @@ actions = {
 
 # Randomly generate resource production amounts for this "turn" or scenario
 #np.random.seed(42)
-resource_availability = {res: np.random.randint(3,5) for res in resources}
+resource_availability = {res: np.random.randint(1,5) for res in resources}
 
 # Convert actions to DataFrame for convenience
 df_actions = pd.DataFrame(actions).T.fillna(0)
