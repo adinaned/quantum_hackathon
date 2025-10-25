@@ -24,39 +24,6 @@ def measure_using_aer_simulator(qc, shots=500000, method='automatic'):
     return counts
 
 # ----------------------------
-# 1) Build QUBO
-# ----------------------------
-
-def build_qubo(hex_numbers, adjacency, lam=None):
-    # dice probabilities for each number
-    dice_probs = {2:1/36, 3:2/36, 4:3/36, 5:4/36, 6:5/36, 7:6/36, 8:5/36, 9:4/36, 10:3/36, 11:2/36, 12:1/36}
-
-    hex_probs = [dice_probs[n] for n in hex_numbers] # gets probabilities for existing tiles
-
-    # number of intersection points + the other 12 outer points
-    # m = len(adjacency) + OUTER_POINTS
-    m = len(adjacency)
-
-    # w = weight (sum of probabilities) for each intersection
-    w = np.array([sum(hex_probs[h] for h in adj) for adj in adjacency])
-
-    if lam is None:
-        # lam - penalty coefficient
-        # max(w) - is the maximum weight of any intersection
-        lam = max(w)
-
-    Q = np.zeros((m,m)) # QUBO matrix initialization
-    for i in range(m):
-        # -w[i] - we want to maximize the weight at each intersection, but in QUBO we minimize the energy
-        # minus sign transforms maximization into minimization
-        Q[i,i] = -w[i]
-    for i, j in itertools.combinations(range(m), 2):
-        Q[i,j] = 2 * lam # 2 * lam - penalty for placing settlements too close to each other
-        Q[j,i] = Q[i,j] # symmetric diagonal
-
-    return Q, w, lam
-
-# ----------------------------
 # 2) Convertire QUBO -> Ising (h, J, offset)
 # ----------------------------
 
@@ -132,6 +99,7 @@ def expectation_from_counts(counts, energies):
         # energies[idx] - QUOA energy for that bitstring
         exp_val += (count / shots) * energies[idx]
     return exp_val
+
 
 def show_best_nodes(counts, E_z, top_k=5):
     n = int(np.log2(len(E_z)))
