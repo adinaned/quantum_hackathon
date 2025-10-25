@@ -5,6 +5,7 @@ from qiskit.quantum_info import Statevector, Pauli
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
+from Algorithm import Q
 
 OUTER_POINTS = 12
 
@@ -14,12 +15,12 @@ def measure_using_aer_simulator(qc, shots=500000, method='automatic'):
     result = simulator.run(qc_transpiled, shots=shots).result()
     counts = result.get_counts(qc_transpiled)
 
-    print(qc.draw(output='text'))
-    print(bound_qc.draw(output='text'))
+    # print(qc.draw(output='text'))
+    # print(bound_qc.draw(output='text'))
 
-    fig = bound_qc.draw(output='mpl', fold=100)
-    fig.savefig('qaoa_circuit.png', dpi=200)
-    plt.show()
+    # fig = bound_qc.draw(output='mpl', fold=100)
+    # fig.savefig('qaoa_circuit.png', dpi=200)
+    # plt.show()
     return counts
 
 # ----------------------------
@@ -48,8 +49,7 @@ def build_qubo(hex_numbers, adjacency, lam=None):
     for i in range(m):
         # -w[i] - we want to maximize the weight at each intersection, but in QUBO we minimize the energy
         # minus sign transforms maximization into minimization
-        # -3 * lam - contraint that we want to have 2 settlements
-        Q[i,i] = -w[i] - 3 * lam
+        Q[i,i] = -w[i]
     for i, j in itertools.combinations(range(m), 2):
         Q[i,j] = 2 * lam # 2 * lam - penalty for placing settlements too close to each other
         Q[j,i] = Q[i,j] # symmetric diagonal
@@ -133,23 +133,34 @@ def expectation_from_counts(counts, energies):
         exp_val += (count / shots) * energies[idx]
     return exp_val
 
+def show_best_nodes(counts, E_z, top_k=5):
+    n = int(np.log2(len(E_z)))
+    # Top solutions by (lowest) energy from full state space
+    idx_sorted = np.argsort(E_z)  # ascending: best (lowest) first
+    print(f"Top {min(top_k, len(idx_sorted))} solutions by energy (lowest first):")
+    for rank in range(min(top_k, len(idx_sorted))):
+        idx = int(idx_sorted[rank])
+        bits = format(idx, f'0{n}b')
+        nodes = [i for i, b in enumerate(bits) if b == '1']
+        print(f"  #{rank+1}: bitstring={bits} idx={idx} energy={E_z[idx]:.6f} nodes={nodes}")
+
+    # Top measured outcomes from counts
+    if counts:
+        print(f"\nTop {top_k} measured outcomes (by frequency):")
+        measured_sorted = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+        for rank, (bitstring, freq) in enumerate(measured_sorted[:top_k]):
+            idx = int(bitstring, 2)
+            nodes = [i for i, b in enumerate(bitstring) if b == '1']
+            print(f"  #{rank+1}: bitstring={bitstring} freq={freq} energy={E_z[idx]:.6f} nodes={nodes}")
+    else:
+        print("No measurement counts available.")
+
 
 if __name__ == '__main__':
-    hex_numbers = [6, 4, 8, 5, 9, 10, 3] # numbers on hex tiles
-    adjacency = [
-        [0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 5], [0, 5, 6], [0, 6, 1],
-        [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]
-    ] # adjacency list for intersections
-
-    Q, w, lam = build_qubo(hex_numbers, adjacency) # returns QUBO matrix, weights, penalty coefficient
     h, J, const = qubo_to_ising(Q) # convert QUBO to Ising model
 
     p = 1 # number of QAOA layers
     qc, gammas, betas = build_qaoa_circuit(h, J, p=p)
-
-    # U_C = favorizează soluțiile cu energie mică (sau scor mare).
-    # U_M = permite „sări” în alte soluții → evită blocarea în minime locale.
-    # Repetiția p-straturi = QAOA → mai multe straturi = aproximare mai bună a soluției optime.
 
     # symbolic parameters assignment
     parameter_values = {
@@ -163,9 +174,24 @@ if __name__ == '__main__':
     n = len(h)
     N = 2 ** n # bitstring (possible solution) space size
     E_z = np.zeros(N)
-    for idx in range(N):
-        bits = np.array(list(map(int, format(idx, f'0{n}b'))))
-        E_z[idx] = bits @ Q @ bits # compute energy for each bitstring
+    energies_pairs = {}
+    E_z_filtered = np.full(N, np.nan)
 
-    exp_val = expectation_from_counts(counts, E_z)
-    print("Expected energy:", exp_val)
+    for i, j in itertools.combinations(range(n), 2):
+        bitchars = ['0'] * n
+        bitchars[i] = '1'
+        bitchars[j] = '1'
+        bits = np.array(list(map(int, bitchars)))
+        idx_int = int(''.join(bitchars), 2)
+        energy = bits @ Q @ bits
+        energies_pairs[(i, j)] = (energy, ''.join(bitchars))
+        E_z_filtered[idx_int] = energy
+
+    for (i, j), (energy, bstr) in sorted(energies_pairs.items(), key=lambda kv: kv[1][0]):
+        print(f"pair {(i, j)} bitstring={bstr} energy={energy:.6f}")
+
+    if 'neighbors' in globals():
+        print("\nAdjacent pairs:")
+        for (i, j), (energy, bstr) in sorted(energies_pairs.items(), key=lambda kv: kv[1][0]):
+            if j in neighbors[i]:
+                print(f"pair {(i, j)} bitstring={bstr} energy={energy:.6f}")

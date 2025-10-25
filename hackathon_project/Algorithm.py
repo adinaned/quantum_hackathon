@@ -278,7 +278,7 @@ def draw_catan_terrain_map(
     ax.scatter([hx for hx, hy in hex_centers], [hy for hx, hy in hex_centers],
                c=[terrain_types[t] for t in terrain_list], s=40, alpha=0)
     plt.title("Quantum Catan Challenge — Random Terrain Map", fontsize=14)
-    plt.show()
+    # plt.show()
 
     return terrain_list, dice_numbers, board
 
@@ -292,5 +292,5 @@ edges = board.compute_edges()
 # print("Edges:", edges)
 
 
-matrix = board.build_vertex_matrix(x=100)
-print(matrix)
+Q = board.build_vertex_matrix(x=100)
+print(Q)
