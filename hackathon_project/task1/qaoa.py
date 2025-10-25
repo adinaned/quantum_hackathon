@@ -5,7 +5,7 @@ from qiskit.quantum_info import Statevector, Pauli
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
-from Algorithm import Q
+from Algorithm import Q, draw_catan_terrain_map, terrain_list, dice_numbers
 
 OUTER_POINTS = 12
 
@@ -15,12 +15,12 @@ def measure_using_aer_simulator(qc, shots=500000, method='automatic'):
     result = simulator.run(qc_transpiled, shots=shots).result()
     counts = result.get_counts(qc_transpiled)
 
-    # print(qc.draw(output='text'))
-    # print(bound_qc.draw(output='text'))
+    print(qc.draw(output='text'))
+    print(bound_qc.draw(output='text'))
 
-    # fig = bound_qc.draw(output='mpl', fold=100)
-    # fig.savefig('qaoa_circuit.png', dpi=200)
-    # plt.show()
+    fig = bound_qc.draw(output='mpl', fold=100)
+    fig.savefig('qaoa_circuit.png', dpi=200)
+    plt.show()
     return counts
 
 # ----------------------------
@@ -187,9 +187,19 @@ if __name__ == '__main__':
         energies_pairs[(i, j)] = (energy, ''.join(bitchars))
         E_z_filtered[idx_int] = energy
 
-    for (i, j), (energy, bstr) in sorted(energies_pairs.items(), key=lambda kv: kv[1][0]):
-        print(f"pair {(i, j)} bitstring={bstr} energy={energy:.6f}")
+    # for (i, j), (energy, bstr) in sorted(energies_pairs.items(), key=lambda kv: kv[1][0]):
+    #     print(f"pair {(i, j)} bitstring={bstr} energy={energy:.6f}")
+    top_pair = None  # initialize
 
+    for idx, ((i, j), (energy, bstr)) in enumerate(sorted(energies_pairs.items(), key=lambda kv: kv[1][0])):
+        print(f"pair {(i, j)} bitstring={bstr} energy={energy:.6f}")
+        if idx == 0:
+            top_pair =((i, j), (energy, bstr)) 
+
+    #TODO
+    print(top_pair[0])
+    draw_catan_terrain_map(terrain_list, dice_numbers,top_pair=top_pair[0])
+    
     if 'neighbors' in globals():
         print("\nAdjacent pairs:")
         for (i, j), (energy, bstr) in sorted(energies_pairs.items(), key=lambda kv: kv[1][0]):
