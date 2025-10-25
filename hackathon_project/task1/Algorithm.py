@@ -256,11 +256,6 @@ def draw_catan_terrain_map(
         "Mountain": "#A9A9A9",
     }
 
-    # Generate randomly if not provided
-    # if terrain_list is None:
-    #     terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
-    # if dice_numbers is None:
-    #     dice_numbers = random.sample([2, 3, 4, 5, 6, 8, 9, 10, 11, 12], len(hex_centers))
 
     # --- Build Board ---
     board = Board()
@@ -308,21 +303,22 @@ def draw_catan_terrain_map(
     
     # --- Poziționează vertexurile ---
     vertex_positions = []
-    angle_offset = np.pi / 6  # 30° (colțurile hexagonului)
+    # angle_offset = np.pi / 6  # 30° (colțurile hexagonului)
+    angle_offset = - np.pi / 6 
     for hx, hy in hex_centers:
         for k in range(6):
-            angle = angle_offset + k * np.pi / 3
+            angle = angle_offset - k * np.pi / 3
             vx = hx + np.cos(angle) * hex_radius
             vy = hy + np.sin(angle) * hex_radius
             vertex_positions.append((vx, vy))
             ax.scatter(vx, vy, color='black', s=10)
 
+
     # --- Evidențiere top_pair ---
     if top_pair is not None:
         (i, j) = top_pair
-        print(f"{(i,j)}")
         if i < len(vertex_positions) and j < len(vertex_positions):
-            xi, yi = vertex_positions[j]
+            xi, yi = vertex_positions[j] 
             xj, yj = vertex_positions[i]
             ax.scatter(xi, yi, color='red', s=150, zorder=5)
             ax.scatter(xj, yj, color='red', s=150, zorder=5)

@@ -18,9 +18,9 @@ def measure_using_aer_simulator(qc, shots=500000, method='automatic'):
     print(qc.draw(output='text'))
     print(bound_qc.draw(output='text'))
 
-    fig = bound_qc.draw(output='mpl', fold=100)
-    fig.savefig('qaoa_circuit.png', dpi=200)
-    plt.show()
+    #fig = bound_qc.draw(output='mpl', fold=100)
+    #fig.savefig('qaoa_circuit.png', dpi=200)
+    #plt.show()
     return counts
 
 # ----------------------------
