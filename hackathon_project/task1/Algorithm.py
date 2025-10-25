@@ -4,28 +4,6 @@ import numpy as np
 import random
 from typing import List, Set, Optional
 
-terrain_types = {
-    "Forest": "#2E8B57",
-    "Field": "#F4E04D",
-    "Pasture": "#9ACD32",
-    "Hill": "#D2691E",
-    "Mountain": "#A9A9A9",
-}
-# Map terrain to resource
-terrain_to_resource = {
-    "Forest": "Wood",
-    "Hill": "Brick",
-    "Field": "Grain",
-    "Pasture": "Sheep",
-    "Mountain": "Ore",
-}
-combos = {
-    "Settlement": ({"Wood", "Brick", "Grain", "Sheep"}, 3),  # Settlement bonus, e.g., +3 points
-    "Road": ({"Wood", "Brick"}, 1),
-    "City": ({"Ore", "Grain"}, 2),
-    "Development": ({"Sheep", "Ore", "Grain"}, 2),
-}
-
 
 # --- Tile class ---
 class Tile:
@@ -58,22 +36,21 @@ class Vertex:
         """
         # Base score from probability
         self.score = sum(probability_map.get(t.number, 0) for t in self.tiles)
-        print(self.id, self.score)
 
-        # # Count tiles by terrain
-        # types = [t.terrain for t in self.tiles]
-        #
-        # # +1: wood and brick
-        # if "Forest" in types and "Hill" in types:
-        #     self.score += 1
-        #
-        # # +2: grain and ore
-        # if "Field" in types and "Mountain" in types and "Pasture" not in types:
-        #     self.score += 2
-        #
-        # # +3: ore + sheep + grain all present
-        # if "Mountain" in types and "Pasture" in types and "Field" in types:
-        #     self.score += 3
+        # Count tiles by terrain
+        types = [t.terrain for t in self.tiles]
+
+        # +1: wood and brick
+        if "Forest" in types and "Hill" in types:
+            self.score += 1
+
+        # +2: grain and ore
+        if "Field" in types and "Mountain" in types and "Pasture" not in types:
+            self.score += 2
+
+        # +3: ore + sheep + grain all present
+        if "Mountain" in types and "Pasture" in types and "Field" in types:
+            self.score += 3
 
     def __repr__(self):
         # Represent vertex as the list of adjacent tiles with terrain and number
@@ -194,36 +171,12 @@ class Board:
         n = len(self.vertices)
         matrix = np.zeros((n, n), dtype=float)
 
-        vertex_has_combo = {v.id: set() for v in self.vertices}
-
-        def vertex_resources(v: 'Vertex') -> set[str]:
-            return set(terrain_to_resource[t.terrain] for t in v.tiles)
-
-        # Step 1: diagonal = only vertex.score (no combo bonuses)
         for v in self.vertices:
-            matrix[v.id, v.id] = 2 * -v.score if v.score is not None else 0
-            # track combos already satisfied for later use in non-neighbor pairs
-            v_res = vertex_resources(v)
-            for name, (res_set, _) in combos.items():
-                if res_set.issubset(v_res):
-                    vertex_has_combo[v.id].add(name)
-
-        # Step 2: neighbors and non-neighbor combos
-        for v in self.vertices:
-            for other in range(n):
-                if other == v.id:
-                    continue
-                if other in v.neighbors:
-                    matrix[v.id, other] = x
-                else:
-                    combined_res = vertex_resources(v) | vertex_resources(self.vertices[other])
-                    max_bonus = 0
-                    for name, (res_set, points) in combos.items():
-                        # only consider combo if it is not already satisfied in either vertex
-                        if name not in vertex_has_combo[v.id] and name not in vertex_has_combo[other]:
-                            if res_set.issubset(combined_res):
-                                max_bonus = max(max_bonus, points)
-                    matrix[v.id, other] = -max_bonus
+            # main diagonal
+            matrix[v.id, v.id] = -v.score if v.score is not None else 0
+            # neighbors
+            for nb_id in v.neighbors:
+                matrix[v.id, nb_id] = x
 
         return matrix
 
@@ -302,11 +255,7 @@ def draw_catan_terrain_map(
         "Hill": "#D2691E",
         "Mountain": "#A9A9A9",
     }
-    # Generate randomly if not provided
-    if terrain_list is None:
-        terrain_list = random.choices(list(terrain_types.keys()), k=len(hex_centers))
-    if dice_numbers is None:
-        dice_numbers = random.sample([2, 3, 4, 5, 6, 8, 9, 10, 11, 12], len(hex_centers))
+
 
     # --- Build Board ---
     board = Board()
@@ -386,11 +335,9 @@ dice_numbers = [2, 4, 9, 11, 10, 8, 5]
 terrain_list, dice_numbers = generate_lists()
 board = draw_catan_terrain_map(terrain_list, dice_numbers)
 # print(board)
-terrains, numbers, board = draw_catan_terrain_map(terrain_list, dice_numbers)
-print(board)
 edges = board.compute_edges()
 # print("Edges:", edges)
 
+
 Q = board.build_vertex_matrix(x=100)
-np.set_printoptions(linewidth=200)
 print(Q)
