@@ -36,31 +36,21 @@ class Vertex:
         """
         # Base score from probability
         self.score = sum(probability_map.get(t.number, 0) for t in self.tiles)
-        if(self.id==1):
-            print(self.score)
 
         # Count tiles by terrain
         types = [t.terrain for t in self.tiles]
-        if(self.id==1):
-            print(types)
 
         # +1: wood and brick
         if "Forest" in types and "Hill" in types:
             self.score += 1
-        if(self.id==1):
-            print(self.score)
 
         # +2: grain and ore
         if "Field" in types and "Mountain" in types and "Pasture" not in types:
             self.score += 2
-        if(self.id==1):
-            print(self.score)
 
         # +3: ore + sheep + grain all present
         if "Mountain" in types and "Pasture" in types and "Field" in types:
             self.score += 3
-        if(self.id==1):
-            print(self.score)
 
     def __repr__(self):
         # Represent vertex as the list of adjacent tiles with terrain and number
@@ -169,15 +159,26 @@ class Board:
         edges = set()
 
         for v in self.vertices:
-            print(f"Neigbours of {v.id} are: ")
             for neighbor_id in v.neighbors:
-                print(neighbor_id)
                 # Only add edge if neighbor is a Vertex object
                 if isinstance(neighbor_id, int):
                     edge = (min(v.id, neighbor_id), max(v.id, neighbor_id))
                     edges.add(edge)
 
         return sorted(edges)
+
+    def build_vertex_matrix(self, x: float) -> np.ndarray:
+        n = len(self.vertices)
+        matrix = np.zeros((n, n), dtype=float)
+
+        for v in self.vertices:
+            # main diagonal
+            matrix[v.id, v.id] = -v.score if v.score is not None else 0
+            # neighbors
+            for nb_id in v.neighbors:
+                matrix[v.id, nb_id] = x
+
+        return matrix
 
     def __repr__(self):
         tiles_repr = "\n".join([repr(tile) for tile in self.tiles])
@@ -288,5 +289,8 @@ dice_numbers = [2, 4, 9, 11, 10, 8, 5]
 terrains, numbers, board = draw_catan_terrain_map(terrain_list, dice_numbers)
 # print(board)
 edges = board.compute_edges()
-print("Edges:", edges)
-print(len(edges))
+# print("Edges:", edges)
+
+
+matrix = board.build_vertex_matrix(x=100)
+print(matrix)
